@@ -11,3 +11,50 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model User {
+  id         String      @id()
+  email      String      @unique
+  name       String?
+  workspaces WorkSpace[]
+  projects   Project[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+}
+
+model WorkSpace {
+  id         String    @id @default(cuid())
+  name       String
+  clerkOrgId String?   @unique
+  owner      User      @relation(fields: [ownerId], references: [id])
+  ownerId    String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  projects   Project[]
+}
+
+model Project {
+  id           String             @id @default(cuid())
+  title        String
+  sourceType   String
+  originalText String
+  workspaceId  String
+  workspace    WorkSpace          @relation(fields: [workspaceId], references: [id])
+  userId       String
+  user         User               @relation(fields: [userId], references: [id])
+  outputs      RepurposeContent[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+}
+
+model RepurposeContent {
+  id        String   @id @default(cuid())
+  platform  String
+  content   String
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id])
+  createdAt DateTime @default(now())
+  updateAt  DateTime @updatedAt
+
+  @@index([projectId])
+}
