@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { UserButton } from "@clerk/nextjs";
 import { syncUserAndWorkspace } from "@/lib/auth-sync";
+import { db } from "@/lib/db";
+import { RepurposeStudio } from "@/components/repurpose-studio";
 
 export default async function DashboardPage() {
   const session = await syncUserAndWorkspace();
@@ -11,8 +13,25 @@ export default async function DashboardPage() {
 
   const { user, activeWorkspace } = session;
 
+  const projects = await db.project.findMany({
+    where: { workspaceId: activeWorkspace.id },
+    include: { outputs: true },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const serializedProjects = projects.map((p) => ({
+    id: p.id,
+    title: p.title,
+    createdAt: p.createdAt.toISOString(),
+    outputs: p.outputs.map((o) => ({
+      id: o.id,
+      platform: o.platform,
+      content: o.content,
+    })),
+  }));
+
   return (
-    <main className="mx-auto max-w-5xl px-6 py-10">
+    <main className="mx-auto max-w-6xl px-6 py-10">
       <header className="flex items-center justify-between border-b pb-6">
         <div>
           <p className="text-xs font-medium uppercase tracking-wider text-neutral-500">
@@ -29,15 +48,7 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      <section className="mt-10 rounded-xl border border-dashed p-10 text-center">
-        <h2 className="text-lg font-medium">Database & Auth Synced</h2>
-        <p className="mt-2 text-sm text-neutral-500">
-          Workspace ID:{" "}
-          <code className="rounded bg-neutral-100 px-1.5 py-0.5 text-xs">
-            {activeWorkspace.id}
-          </code>
-        </p>
-      </section>
+      <RepurposeStudio initialProjects={serializedProjects} />
     </main>
   );
 }
