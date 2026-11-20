@@ -1,54 +1,49 @@
-import { redirect } from "next/navigation";
-import { UserButton } from "@clerk/nextjs";
-import { syncUserAndWorkspace } from "@/lib/auth-sync";
-import { db } from "@/lib/db";
-import { RepurposeStudio } from "@/components/repurpose-studio";
+import Link from "next/link";
+import { auth } from "@clerk/nextjs/server";
+import { SignInButton, SignUpButton } from "@clerk/nextjs";
 
-export default async function DashboardPage() {
-  const session = await syncUserAndWorkspace();
-
-  if (!session) {
-    redirect("/");
-  }
-
-  const { user, activeWorkspace } = session;
-
-  const projects = await db.project.findMany({
-    where: { workspaceId: activeWorkspace.id },
-    include: { outputs: true },
-    orderBy: { createdAt: "desc" },
-  });
-
-  const serializedProjects = projects.map((p) => ({
-    id: p.id,
-    title: p.title,
-    createdAt: p.createdAt.toISOString(),
-    outputs: p.outputs.map((o) => ({
-      id: o.id,
-      platform: o.platform,
-      content: o.content,
-    })),
-  }));
+export default async function HomePage() {
+  const { userId } = await auth();
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-10">
-      <header className="flex items-center justify-between border-b pb-6">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-neutral-500">
-            Active Workspace
-          </p>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {activeWorkspace.name}
-          </h1>
-        </div>
+    <main className="flex min-h-screen flex-col items-center justify-center bg-neutral-50 px-6 text-center">
+      <span className="rounded-full border bg-white px-3 py-1 text-xs font-medium text-neutral-600">
+        Powered by Gemini 2.5 Flash
+      </span>
 
-        <div className="flex items-center gap-4">
-          <span className="text-sm text-neutral-600">{user.email}</span>
-          <UserButton />
-        </div>
-      </header>
+      <h1 className="mt-6 max-w-2xl text-4xl font-bold tracking-tight text-neutral-900 sm:text-5xl">
+        Turn one piece of content into a full multi-channel campaign.
+      </h1>
 
-      <RepurposeStudio initialProjects={serializedProjects} />
+      <p className="mt-4 max-w-xl text-base text-neutral-600">
+        Paste a blog post, transcript, or rough notes and instantly generate
+        tailored LinkedIn posts, X threads, and newsletter sections inside
+        your team workspace.
+      </p>
+
+      <div className="mt-8 flex items-center gap-4">
+        {userId ? (
+          <Link
+            href="/dashboard"
+            className="rounded-lg bg-black px-6 py-3 text-sm font-medium text-white hover:bg-neutral-800"
+          >
+            Open Workspace Dashboard
+          </Link>
+        ) : (
+          <>
+            <SignUpButton mode="modal" forceRedirectUrl="/dashboard">
+              <button className="rounded-lg bg-black px-6 py-3 text-sm font-medium text-white hover:bg-neutral-800">
+                Start Repurposing Free
+              </button>
+            </SignUpButton>
+            <SignInButton mode="modal" forceRedirectUrl="/dashboard">
+              <button className="rounded-lg border bg-white px-6 py-3 text-sm font-medium text-neutral-800 hover:bg-neutral-100">
+                Sign In
+              </button>
+            </SignInButton>
+          </>
+        )}
+      </div>
     </main>
   );
 }
